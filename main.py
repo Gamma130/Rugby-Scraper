@@ -9,7 +9,6 @@ def scrape_rugby_matches():
         browser = p.chromium.launch(headless=False)
         page = browser.new_page()
         matches = []
-        retry_count = 3
 
         # Go to the page and wait for iframe to load
         page.goto("https://bits-rugby-ls.de/rugby-1-bundesliga-nord-ost")
@@ -17,56 +16,43 @@ def scrape_rugby_matches():
         close_cookies.click()
         while True:
             current_table_page = page.locator('a.paginate_button.current').inner_text()
+            print('current page: ', current_table_page)
             rows = page.locator('tr.sp-row')
             count = rows.count()
-
+            print(count)
             for i in range(count):
-                for attempt in range(retry_count):
-                    try:
-                        date = rows.nth(i).locator('.data-date date').inner_text()
-                        teams = rows.nth(i).locator('.data-event').inner_text()
-                        score = rows.nth(i).locator('.data-time').inner_text()
-                        matchday = rows.nth(i).locator('.data-day').inner_text()
+                print(i)
+                date = rows.nth(i).locator('.data-date date').inner_text()
+                teams = rows.nth(i).locator('.data-event').inner_text()
+                score = rows.nth(i).locator('.data-time').inner_text()
+                matchday = rows.nth(i).locator('.data-day').inner_text()
 
-                        match_link = rows.nth(i).locator('.data-event a')
-                        match_link.click()
+                match_link = rows.nth(i).locator('.data-event a')
+                match_link.click()
 
-                        # Add longer wait time
-                        page.wait_for_selector('div.sp-section-content.sp-section-content-venue', timeout=30000)
+                # Add longer wait time
+                page.wait_for_selector('div.sp-section-content.sp-section-content-venue', timeout=30000)
 
-                        venue_selector = 'div > div.sp-section-content.sp-section-content-venue > div > table > thead > tr > th > a'
-                        venue = page.locator(venue_selector).inner_text()
+                venue_selector = 'div > div.sp-section-content.sp-section-content-venue > div > table > thead > tr > th > a'
+                venue = page.locator(venue_selector).inner_text()
+                page.go_back()
+                page.wait_for_selector('tr.sp-row')
 
-                        page.go_back()
-                        page.wait_for_selector('tr.sp-row')
+                matches.append({
+                    'date': date,
+                    'teams': teams,
+                    'score': score,
+                    'matchday': matchday,
+                    'venue': venue
+                })
 
-                        matches.append({
-                            'date': date,
-                            'teams': teams,
-                            'score': score,
-                            'matchday': matchday,
-                            'venue': venue
-                        })
-                        break  # Success, exit retry loop
-
-                    except Exception as e:
-                        print(f"Error on attempt {attempt + 1} for match {i}: {str(e)}")
-                        if attempt == retry_count - 1:  # Last attempt
-                            print(f"Failed to process match {i} after {retry_count} attempts")
-                        else:
-                            time.sleep(5)  # Wait before retry
-                            try:
-                                # Try to return to main page if we're stuck
-                                page.goto("https://bits-rugby-ls.de/rugby-1-bundesliga-nord-ost")
-                                rows = page.locator('tr.sp-row')  # Relocate rows
-                            except:
-                                pass
 
             next_button = page.locator('a.paginate_button.next')
             if 'disabled' in page.locator('a.paginate_button.next').get_attribute('class'):
                 break
 
             next_button.click()
+            time.sleep(2)
         browser.close()
         df = pd.DataFrame(matches)
         print(df)
