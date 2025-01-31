@@ -1,27 +1,23 @@
 from playwright.sync_api import sync_playwright
-from bs4 import BeautifulSoup
 import pandas as pd
-import time
+import json
 
 
-def scrape_rugby_matches():
+def scrape_rugby_matches(url: str):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
         page = browser.new_page()
         matches = []
 
         # Go to the page and wait for iframe to load
-        page.goto("https://bits-rugby-ls.de/rugby-1-bundesliga-nord-ost")
+        page.goto(url)
         close_cookies = page.locator('.cmplz-close')
         close_cookies.click()
         while True:
             current_table_page = page.locator('a.paginate_button.current').inner_text()
-            print('current page: ', current_table_page)
             rows = page.locator('tr.sp-row')
             count = rows.count()
-            print(count)
             for i in range(count):
-                print(i)
                 date = rows.nth(i).locator('.data-date date').inner_text()
                 teams = rows.nth(i).locator('.data-event').inner_text()
                 score = rows.nth(i).locator('.data-time').inner_text()
@@ -37,7 +33,8 @@ def scrape_rugby_matches():
                 venue = page.locator(venue_selector).inner_text()
                 page.go_back()
                 page.wait_for_selector('tr.sp-row')
-
+                page.locator(f'a.paginate_button[data-dt-idx="{current_table_page}"]').click()
+                page.wait_for_selector('tr.sp-row')
                 matches.append({
                     'date': date,
                     'teams': teams,
@@ -52,11 +49,16 @@ def scrape_rugby_matches():
                 break
 
             next_button.click()
-            time.sleep(2)
+            page.wait_for_selector('tr.sp-row')
         browser.close()
-        df = pd.DataFrame(matches)
-        print(df)
+        return pd.DataFrame(matches)
 
 
 if __name__ == "__main__":
-    scrape_rugby_matches()
+    if __name__ == "__main__":
+        matches_df = scrape_rugby_matches("https://bits-rugby-ls.de/rugby-1-bundesliga-sued-west")
+        matches_json = matches_df.to_json(orient='records', date_format='iso')
+
+        # Save to file
+        with open('rugby_matches_SW.json', 'w', encoding='utf-8') as f:
+            json.dump(json.loads(matches_json), f, ensure_ascii=False, indent=2)
