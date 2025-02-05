@@ -5,14 +5,18 @@ import json
 
 def scrape_rugby_matches(url: str):
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
+        browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         matches = []
 
         # Go to the page and wait for iframe to load
         page.goto(url)
-        close_cookies = page.locator('.cmplz-close')
-        close_cookies.click()
+        try:
+            close_cookies = page.locator('.cmplz-close')
+            if close_cookies.is_visible(timeout=3000):
+                close_cookies.click()
+        except:
+            pass
         while True:
             current_table_page = page.locator('a.paginate_button.current').inner_text()
             rows = page.locator('tr.sp-row')
@@ -60,5 +64,5 @@ if __name__ == "__main__":
         matches_json = matches_df.to_json(orient='records', date_format='iso')
 
         # Save to file
-        with open('rugby_matches_SW.json', 'w', encoding='utf-8') as f:
+        with open('standings.json', 'w', encoding='utf-8') as f:
             json.dump(json.loads(matches_json), f, ensure_ascii=False, indent=2)
