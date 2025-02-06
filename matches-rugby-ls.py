@@ -2,6 +2,11 @@ from playwright.sync_api import sync_playwright
 import pandas as pd
 import json
 
+def extract_team_names(teams: str):
+    team_names = teams.split('vs')
+    return team_names
+def convert_team_name(team_name: str):
+    team_name = team_name.replace('TSV Handschuhsheim Rugby', 'TSV Handschuhsheim')
 
 def scrape_rugby_matches(url: str):
     with sync_playwright() as p:

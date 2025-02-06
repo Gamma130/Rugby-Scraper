@@ -5,7 +5,7 @@ import json
 
 def scrape_rugby_matches(url: str):
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
+        browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         standings = []
 
@@ -18,7 +18,6 @@ def scrape_rugby_matches(url: str):
         except:
             pass
 
-        current_table_page = page.locator('a.paginate_button.current').inner_text()
         rows = page.locator('.sp-league-table tbody tr')
         count = rows.count()
         for i in range(count):
@@ -57,5 +56,5 @@ if __name__ == "__main__":
         standings_json = standings_df.to_json(orient='records', date_format='iso')
 
         # Save to file
-        with open('Standings-Table.json', 'w', encoding='utf-8') as f:
+        with open('standings-table-SW.json', 'w', encoding='utf-8') as f:
             json.dump(json.loads(standings_json), f, ensure_ascii=False, indent=2)
